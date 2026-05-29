@@ -7,7 +7,7 @@
       "chipFamily": "ESP8266",
       "parts": [
         {
-          "path": "https://github.com/Bit-wizard-esp/Espie/releases/download/vBeta1.0.0/firmware.bin",f
+          "path": "https://github.com/Bit-wizard-esp/Espie/releases/download/vBeta1.0.0/firmware.bin",
 
           "offset": 0
         }
