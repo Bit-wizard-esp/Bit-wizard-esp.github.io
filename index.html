@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESPie — iButton Tool для ESP8266</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #03080a;
+      --bg2:       #071214;
+      --bg3:       #0b1c20;
+      --primary:   #00e5cc;
+      --primary2:  #00b4a0;
+      --accent:    #00fff5;
+      --glow:      #00e5cc55;
+      --text:      #c8f7f3;
+      --muted:     #4a8a84;
+      --card:      #0d2226;
+      --border:    #1a4a50;
+      --red:       #ff4466;
+      --green:     #00e5a0;
+      --yellow:    #ffe040;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+    }
+
+    /* SCANLINE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,229,204,0.015) 2px,
+        rgba(0,229,204,0.015) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(3,8,10,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.3rem;
+      color: var(--primary);
+      text-shadow: 0 0 12px var(--glow);
+      letter-spacing: 2px;
+    }
+
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 0.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--primary);
+      border-color: var(--border);
+      text-shadow: 0 0 8px var(--glow);
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 5rem 2rem 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,229,204,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 30% 30% at 80% 20%, rgba(0,180,160,0.05) 0%, transparent 60%);
+    }
+
+    /* Grid lines */
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,204,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,204,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+    }
+
+    .hero-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--primary2);
+      border: 1px solid var(--border);
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      position: relative;
+      animation: fadein 1s ease;
+    }
+
+    .hero-title {
+      font-size: clamp(3rem, 10vw, 7rem);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 0.9;
+      position: relative;
+      animation: fadein 1s ease 0.1s both;
+    }
+
+    .hero-title .main {
+      color: var(--primary);
+      text-shadow: 0 0 40px rgba(0,229,204,0.4), 0 0 80px rgba(0,229,204,0.15);
+    }
+
+    .hero-title .sub {
+      display: block;
+      font-size: 0.28em;
+      font-weight: 300;
+      color: var(--muted);
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      text-shadow: none;
+      margin-top: 0.5rem;
+    }
+
+    .hero-desc {
+      max-width: 560px;
+      margin: 2rem auto 0;
+      font-size: 1.05rem;
+      color: var(--muted);
+      line-height: 1.7;
+      animation: fadein 1s ease 0.2s both;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadein 1s ease 0.3s both;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--primary);
+      color: #030a09;
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 0.8rem 2rem;
+      border-radius: 6px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 0 20px rgba(0,229,204,0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent);
+      box-shadow: 0 0 35px rgba(0,229,204,0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: transparent;
+      color: var(--primary);
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 0.8rem 2rem;
+      border-radius: 6px;
+      text-decoration: none;
+      border: 1px solid var(--primary2);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--primary);
+      background: rgba(0,229,204,0.08);
+      box-shadow: 0 0 20px rgba(0,229,204,0.15);
+    }
+
+    .hero-photo {
+      margin-top: 3.5rem;
+      position: relative;
+      animation: fadein 1s ease 0.4s both;
+    }
+
+    .hero-photo img {
+      width: min(480px, 90vw);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 0 60px rgba(0,229,204,0.15), 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .photo-caption {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.8rem;
+      letter-spacing: 2px;
+    }
+
+    /* SECTIONS */
+    section {
+      padding: 5rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--primary2);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+
+    .section-title .hl { color: var(--primary); }
+
+    /* FEATURES GRID */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 3rem;
+    }
+
+    .feature-card {
+      background: var(--bg2);
+      padding: 2rem;
+      transition: background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--primary);
+      transform: scaleX(0);
+      transition: transform 0.3s;
+      transform-origin: left;
+    }
+
+    .feature-card:hover { background: var(--bg3); }
+    .feature-card:hover::before { transform: scaleX(1); }
+
+    .feature-icon {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-name {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--primary);
+      letter-spacing: 1px;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .feature-desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .status-badge {
+      display: inline-block;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      margin-top: 0.5rem;
+      letter-spacing: 1px;
+    }
+
+    .status-ok { background: rgba(0,229,160,0.15); color: var(--green); border: 1px solid rgba(0,229,160,0.3); }
+    .status-wip { background: rgba(255,224,64,0.1); color: var(--yellow); border: 1px solid rgba(255,224,64,0.3); }
+
+    /* SPECS */
+    .specs-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 3rem;
+      align-items: start;
+    }
+
+    @media (max-width: 700px) {
+      .specs-layout { grid-template-columns: 1fr; }
+      nav { padding: 0 1rem; }
+      .nav-links a { padding: 0.3rem 0.5rem; font-size: 0.75rem; }
+    }
+
+    .specs-table {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .specs-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 0.75rem 1.2rem;
+      border-bottom: 1px solid rgba(26,74,80,0.5);
+      font-size: 0.88rem;
+    }
+
+    .specs-row:last-child { border-bottom: none; }
+    .specs-row:nth-child(odd) { background: rgba(0,229,204,0.03); }
+
+    .specs-key {
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.5px;
+    }
+
+    .specs-val {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    .pinout-table {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .pinout-head {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      padding: 0.6rem 1.2rem;
+      background: var(--bg3);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--primary2);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pinout-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      padding: 0.6rem 1.2rem;
+      border-bottom: 1px solid rgba(26,74,80,0.4);
+      font-size: 0.83rem;
+      transition: background 0.15s;
+    }
+
+    .pinout-row:last-child { border-bottom: none; }
+    .pinout-row:hover { background: rgba(0,229,204,0.04); }
+
+    .pin-func { color: var(--text); }
+    .pin-gpio { color: var(--primary); font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; }
+    .pin-board { color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; }
+
+    /* GALLERY */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+    }
+
+    .gallery-item {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--card);
+      transition: all 0.3s;
+    }
+
+    .gallery-item:hover {
+      border-color: var(--primary2);
+      box-shadow: 0 0 30px rgba(0,229,204,0.12);
+      transform: translateY(-4px);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .gallery-cap {
+      padding: 0.8rem 1rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* INSTALL SECTION */
+    .install-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      margin-top: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .install-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    }
+
+    .install-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .install-step {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .step-num {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--border);
+      line-height: 1;
+    }
+
+    .step-title {
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .step-desc {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2rem;
+      text-align: left;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 600px) {
+      .footer-inner { grid-template-columns: 1fr; }
+    }
+
+    .footer-col-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--primary2);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .footer-col a {
+      display: block;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover { color: var(--primary); }
+
+    .footer-copy {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+      opacity: 0.6;
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadein {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* SCROLL REVEAL */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* DIVIDER */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">ESP<span>ie</span></div>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Главная</a></li>
+      <li><a href="flash.html">Прошить</a></li>
+      <li><a href="https://github.com/Bit-wizard-esp/Espie" target="_blank">GitHub</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-badge">ESP8266 · iButton Tool · Beta 1.0.0</div>
+    <h1 class="hero-title">
+      <span class="main">ESPie</span>
+      <span class="sub">iButton Key Tool</span>
+    </h1>
+    <p class="hero-desc">
+      Портативное устройство на базе ESP8266 для чтения, эмуляции и брутфорса
+      ключей iButton серии DS1990A/DS2401. Управление через OLED-дисплей и 4 кнопки.
+    </p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="flash.html">⚡ Прошить устройство</a>
+      <a class="btn-outline" href="https://github.com/Bit-wizard-esp/Espie" target="_blank">GitHub →</a>
+    </div>
+    <div class="hero-photo">
+      <img src="https://github.com/Bit-wizard-esp/Espie/raw/main/assets/fronton.JPG" alt="ESPie устройство">
+      <div class="photo-caption">// ESPIE BETA — ТЕСТОВЫЙ ЭКЗЕМПЛЯР</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- FEATURES -->
+  <section>
+    <div class="section-label reveal">// функции</div>
+    <h2 class="section-title reveal">Что умеет <span class="hl">ESPie</span></h2>
+
+    <div class="features-grid reveal">
+      <div class="feature-card">
+        <div class="feature-icon">📖</div>
+        <div class="feature-name">READ KEY</div>
+        <div class="feature-desc">Считать ключ iButton с шины OneWire через GPIO0. Результат сохраняется в EEPROM (до 10 ключей).</div>
+        <span class="status-badge status-ok">✓ РАБОТАЕТ</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📡</div>
+        <div class="feature-name">EMULATE</div>
+        <div class="feature-desc">Эмуляция ключа из памяти на GPIO2 в течение 10 секунд. Выбор ключа кнопками UP/DOWN.</div>
+        <span class="status-badge status-ok">✓ РАБОТАЕТ</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔓</div>
+        <div class="feature-name">BRUTFORCE</div>
+        <div class="feature-desc">Перебор 27 встроенных ключей + все сохранённые пользователем. Интервал 500 мс.</div>
+        <span class="status-badge status-ok">✓ РАБОТАЕТ</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👁️</div>
+        <div class="feature-name">VIEW CODE</div>
+        <div class="feature-desc">Просмотр HEX-кода ключа с проверкой CRC. Удобно для верификации считанных ключей.</div>
+        <span class="status-badge status-ok">✓ РАБОТАЕТ</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗑️</div>
+        <div class="feature-name">DELETE</div>
+        <div class="feature-desc">Удаление ключей из EEPROM. Управление сохранёнными записями через меню устройства.</div>
+        <span class="status-badge status-ok">✓ РАБОТАЕТ</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <div class="feature-name">WRITE KEY</div>
+        <div class="feature-desc">Запись ключа на перезаписываемую метку DS1990A. Реализация протокола в разработке.</div>
+        <span class="status-badge status-wip">⚠ В РАЗРАБОТКЕ</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- SPECS -->
+  <section>
+    <div class="section-label reveal">// железо</div>
+    <h2 class="section-title reveal">Компоненты и <span class="hl">распиновка</span></h2>
+
+    <div class="specs-layout">
+      <div class="reveal">
+        <div class="specs-table">
+          <div class="specs-row">
+            <span class="specs-key">МК</span>
+            <span class="specs-val">ESP8266 (NodeMCU / Wemos D1 Mini)</span>
+          </div>
+          <div class="specs-row">
+            <span class="specs-key">Дисплей</span>
+            <span class="specs-val">OLED 128×64, SSD1306, I2C</span>
+          </div>
+          <div class="specs-row">
+            <span class="specs-key">Кнопки</span>
+            <span class="specs-val">4 шт. (UP, DOWN, OK, BACK)</span>
+          </div>
+          <div class="specs-row">
+            <span class="specs-key">Интерфейс</span>
+            <span class="specs-val">GPIO0 — чтение, GPIO2 — эмуляция</span>
+          </div>
+          <div class="specs-row">
+            <span class="specs-key">Питание</span>
+            <span class="specs-val">TP4056 + Li-Ion батарея</span>
+          </div>
+          <div class="specs-row">
+            <span class="specs-key">Память ключей</span>
+            <span class="specs-val">До 10 ключей в EEPROM</span>
+          </div>
+          <div class="specs-row">
+            <span class="specs-key">IDE</span>
+            <span class="specs-val">Arduino IDE</span>
+          </div>
+        </div>
+      </div>
+      <div class="reveal">
+        <div class="pinout-table">
+          <div class="pinout-head">
+            <span>Назначение</span>
+            <span>GPIO</span>
+            <span>NodeMCU Pin</span>
+          </div>
+          <div class="pinout-row">
+            <span class="pin-func">OLED SDA</span>
+            <span class="pin-gpio">GPIO4</span>
+            <span class="pin-board">D2</span>
+          </div>
+          <div class="pinout-row">
+            <span class="pin-func">OLED SCL</span>
+            <span class="pin-gpio">GPIO5</span>
+            <span class="pin-board">D1</span>
+          </div>
+          <div class="pinout-row">
+            <span class="pin-func">BTN UP</span>
+            <span class="pin-gpio">GPIO13</span>
+            <span class="pin-board">D7</span>
+          </div>
+          <div class="pinout-row">
+            <span class="pin-func">BTN DOWN</span>
+            <span class="pin-gpio">GPIO12</span>
+            <span class="pin-board">D6</span>
+          </div>
+          <div class="pinout-row">
+            <span class="pin-func">BTN OK</span>
+            <span class="pin-gpio">GPIO14</span>
+            <span class="pin-board">D5</span>
+          </div>
+          <div class="pinout-row">
+            <span class="pin-func">BTN BACK</span>
+            <span class="pin-gpio">GPIO16</span>
+            <span class="pin-board">D0</span>
+          </div>
+          <div class="pinout-row">
+            <span class="pin-func">OneWire R/W</span>
+            <span class="pin-gpio">GPIO0</span>
+            <span class="pin-board">D3</span>
+          </div>
+          <div class="pinout-row">
+            <span class="pin-func">Emulation TX</span>
+            <span class="pin-gpio">GPIO2</span>
+            <span class="pin-board">D4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- GALLERY -->
+  <section>
+    <div class="section-label reveal">// фото</div>
+    <h2 class="section-title reveal">Тестовая <span class="hl">версия</span></h2>
+    <div class="gallery-grid reveal">
+      <div class="gallery-item">
+        <img src="https://github.com/Bit-wizard-esp/Espie/raw/main/assets/fronton.JPG" alt="ESPie фронт вкл">
+        <div class="gallery-cap">// FRONT — DEVICE ON</div>
+      </div>
+      <div class="gallery-item">
+        <img src="https://github.com/Bit-wizard-esp/Espie/raw/main/assets/frontoff.JPG" alt="ESPie фронт выкл">
+        <div class="gallery-cap">// FRONT — DEVICE OFF</div>
+      </div>
+      <div class="gallery-item">
+        <img src="https://github.com/Bit-wizard-esp/Espie/raw/main/assets/back.JPG" alt="ESPie тыл">
+        <div class="gallery-cap">// BACK SIDE</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- INSTALL -->
+  <section>
+    <div class="section-label reveal">// установка</div>
+    <h2 class="section-title reveal">Как <span class="hl">прошить</span></h2>
+    <div class="install-section reveal">
+      <div class="install-steps">
+        <div class="install-step">
+          <span class="step-num">01</span>
+          <span class="step-title">Подключи ESP8266</span>
+          <span class="step-desc">Подключи Wemos D1 Mini или NodeMCU через USB к компьютеру.</span>
+        </div>
+        <div class="install-step">
+          <span class="step-num">02</span>
+          <span class="step-title">Открой флешер</span>
+          <span class="step-desc">Нажми кнопку «Прошить устройство» ниже. Нужен Chrome, Edge или Opera.</span>
+        </div>
+        <div class="install-step">
+          <span class="step-num">03</span>
+          <span class="step-title">Выбери плату</span>
+          <span class="step-desc">Выбери Wemos D1 Mini или NodeMCU и нажми «Подключить».</span>
+        </div>
+        <div class="install-step">
+          <span class="step-num">04</span>
+          <span class="step-title">Прошивка готова</span>
+          <span class="step-desc">Дождись завершения. После — нажми RESET на плате.</span>
+        </div>
+      </div>
+      <div style="margin-top:2rem;">
+        <a class="btn-primary" href="flash.html">⚡ Перейти к прошивке</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-col">
+        <div class="footer-col-title">ESPie</div>
+        <p style="color:var(--muted);font-size:0.83rem;line-height:1.6;">Инструмент для iButton ключей на базе ESP8266. Открытый исходный код, лицензия MIT.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Ссылки</div>
+        <a href="https://github.com/Bit-wizard-esp/Espie" target="_blank">GitHub репозиторий</a>
+        <a href="https://github.com/Bit-wizard-esp/Espie/releases" target="_blank">Релизы</a>
+        <a href="https://github.com/Bit-wizard-esp/Espie/blob/main/LICENSE" target="_blank">MIT Лицензия</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Библиотеки</div>
+        <a href="https://github.com/adafruit/Adafruit_SSD1306" target="_blank">Adafruit SSD1306</a>
+        <a href="https://github.com/PaulStoffregen/OneWire" target="_blank">OneWire</a>
+        <a href="https://github.com/orgua/OneWireHub" target="_blank">OneWireHub</a>
+        <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
+      </div>
+    </div>
+    <div class="footer-copy">// By Bit-wizard-esp · MIT License · ESP Web Tools</div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

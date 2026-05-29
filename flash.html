@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Прошивка ESPie — iButton Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <style>
+    :root {
+      --bg:        #03080a;
+      --bg2:       #071214;
+      --bg3:       #0b1c20;
+      --primary:   #00e5cc;
+      --primary2:  #00b4a0;
+      --accent:    #00fff5;
+      --glow:      #00e5cc55;
+      --text:      #c8f7f3;
+      --muted:     #4a8a84;
+      --card:      #0d2226;
+      --border:    #1a4a50;
+      --red:       #ff4466;
+      --green:     #00e5a0;
+      --yellow:    #ffe040;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,229,204,0.015) 2px,
+        rgba(0,229,204,0.015) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(3,8,10,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.3rem;
+      color: var(--primary);
+      text-shadow: 0 0 12px var(--glow);
+      letter-spacing: 2px;
+      text-decoration: none;
+    }
+
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 0.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--primary);
+      border-color: var(--border);
+      text-shadow: 0 0 8px var(--glow);
+    }
+
+    /* NO SERIAL BANNER */
+    .no-serial {
+      display: none;
+      background: rgba(255,68,102,0.1);
+      border: 1px solid rgba(255,68,102,0.4);
+      border-radius: 8px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .no-serial h3 {
+      color: var(--red);
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+    }
+
+    .no-serial p { color: var(--muted); font-size: 0.88rem; margin-bottom: 1rem; }
+
+    .browser-links {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .browser-link {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .browser-link:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* MAIN */
+    main {
+      padding-top: 90px;
+      padding-bottom: 4rem;
+      max-width: 860px;
+      margin: 0 auto;
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      animation: fadein 0.8s ease;
+    }
+
+    .page-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--primary2);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+
+    .page-title {
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 900;
+      color: var(--primary);
+      text-shadow: 0 0 40px rgba(0,229,204,0.3);
+    }
+
+    .page-sub {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 0.6rem;
+    }
+
+    /* BOARDS GRID */
+    .boards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      animation: fadein 0.8s ease 0.1s both;
+    }
+
+    @media (max-width: 600px) {
+      .boards-grid { grid-template-columns: 1fr; }
+      nav { padding: 0 1rem; }
+      .nav-links a { padding: 0.3rem 0.5rem; font-size: 0.75rem; }
+    }
+
+    .board-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .board-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .board-card:hover { border-color: var(--primary2); box-shadow: 0 0 30px rgba(0,229,204,0.1); }
+    .board-card:hover::before { opacity: 1; }
+
+    .board-chip {
+      display: inline-block;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--primary2);
+      border: 1px solid var(--border);
+      padding: 0.2rem 0.6rem;
+      border-radius: 3px;
+      letter-spacing: 1px;
+      margin-bottom: 1rem;
+    }
+
+    .board-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+
+    .board-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .board-specs {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .board-spec {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid rgba(26,74,80,0.4);
+    }
+
+    .spec-k { color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; }
+    .spec-v { color: var(--text); }
+
+    /* ESP Web Tools button override */
+    esp-web-install-button {
+      display: block;
+    }
+
+    esp-web-install-button[active] button {
+      background: var(--primary) !important;
+      color: #030a09 !important;
+      font-family: 'Exo 2', sans-serif !important;
+      font-weight: 700 !important;
+      font-size: 0.9rem !important;
+      letter-spacing: 1px !important;
+      text-transform: uppercase !important;
+      padding: 0.8rem 1.5rem !important;
+      border-radius: 6px !important;
+      border: none !important;
+      cursor: pointer !important;
+      width: 100% !important;
+      box-shadow: 0 0 20px rgba(0,229,204,0.3) !important;
+      transition: all 0.2s !important;
+    }
+
+    esp-web-install-button[active] button:hover {
+      background: var(--accent) !important;
+      box-shadow: 0 0 35px rgba(0,229,204,0.5) !important;
+    }
+
+    .flash-btn-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .flash-btn-hint {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    /* MANUAL FALLBACK BUTTON */
+    .btn-manual {
+      display: block;
+      width: 100%;
+      background: var(--primary);
+      color: #030a09;
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 0.8rem 1.5rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      box-shadow: 0 0 20px rgba(0,229,204,0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-manual:hover {
+      background: var(--accent);
+      box-shadow: 0 0 35px rgba(0,229,204,0.5);
+    }
+
+    /* INSTRUCTIONS */
+    .instructions-block {
+      margin-top: 3rem;
+      animation: fadein 0.8s ease 0.2s both;
+    }
+
+    .instr-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    @media (max-width: 600px) { .instr-grid { grid-template-columns: 1fr; } }
+
+    .instr-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+    }
+
+    .instr-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--primary2);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .instr-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .instr-list li {
+      font-size: 0.85rem;
+      color: var(--muted);
+      padding-left: 1.2rem;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .instr-list li::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    /* SECTION LABEL */
+    .block-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--primary2);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .footer-copy {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+      opacity: 0.6;
+    }
+
+    .footer-copy a { color: var(--primary2); text-decoration: none; }
+    .footer-copy a:hover { color: var(--primary); }
+
+    @keyframes fadein {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="index.html">ESP<span>ie</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Главная</a></li>
+      <li><a href="flash.html" class="active">Прошить</a></li>
+      <li><a href="https://github.com/Bit-wizard-esp/Espie" target="_blank">GitHub</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <!-- NO SERIAL BANNER -->
+    <div class="no-serial" id="noSerialBanner">
+      <h3>⚠ Браузер не поддерживает Web Serial API</h3>
+      <p>Для прошивки ESPie через этот сайт используй один из следующих браузеров:</p>
+      <div class="browser-links">
+        <a class="browser-link" href="https://www.google.com/chrome/" target="_blank">Google Chrome</a>
+        <a class="browser-link" href="https://www.microsoft.com/edge" target="_blank">Microsoft Edge</a>
+        <a class="browser-link" href="https://www.opera.com/" target="_blank">Opera</a>
+      </div>
+    </div>
+
+    <div class="page-header">
+      <div class="page-label">// web flasher</div>
+      <div class="page-title">Прошивка ESPie</div>
+      <div class="page-sub">Beta 1.0.0 · ESP8266 · Wemos D1 Mini / NodeMCU</div>
+    </div>
+
+    <!-- BOARDS -->
+    <div class="block-label">// выбери плату</div>
+    <div class="boards-grid">
+
+      <!-- WEMOS D1 MINI -->
+      <div class="board-card">
+        <span class="board-chip">ESP8266</span>
+        <div class="board-name">Wemos D1 Mini</div>
+        <div class="board-desc">Компактная плата на ESP8266. Идеально подходит для портативного корпуса ESPie.</div>
+        <div class="board-specs">
+          <div class="board-spec">
+            <span class="spec-k">МК</span>
+            <span class="spec-v">ESP8266 80/160 MHz</span>
+          </div>
+          <div class="board-spec">
+            <span class="spec-k">Flash</span>
+            <span class="spec-v">4 MB</span>
+          </div>
+          <div class="board-spec">
+            <span class="spec-k">GPIO</span>
+            <span class="spec-v">11 цифровых</span>
+          </div>
+          <div class="board-spec">
+            <span class="spec-k">Питание</span>
+            <span class="spec-v">5V USB / 3.3V</span>
+          </div>
+        </div>
+        <div class="flash-btn-wrapper">
+          <esp-web-install-button manifest="manifest.json">
+            <button slot="activate" class="btn-manual">⚡ Прошить Wemos D1 Mini</button>
+            <span slot="unsupported">
+              <a class="btn-manual" href="https://github.com/Bit-wizard-esp/Espie/releases/download/vBeta1.0.0/espie.bin" download>⬇ Скачать прошивку (.bin)</a>
+            </span>
+          </esp-web-install-button>
+          <span class="flash-btn-hint">// требуется Chrome, Edge или Opera</span>
+        </div>
+      </div>
+
+      <!-- NODEMCU -->
+      <div class="board-card">
+        <span class="board-chip">ESP8266</span>
+        <div class="board-name">NodeMCU 1.0</div>
+        <div class="board-desc">Популярная плата разработчика. Встроенный USB-UART, удобна для прототипирования ESPie.</div>
+        <div class="board-specs">
+          <div class="board-spec">
+            <span class="spec-k">МК</span>
+            <span class="spec-v">ESP8266 80/160 MHz</span>
+          </div>
+          <div class="board-spec">
+            <span class="spec-k">Flash</span>
+            <span class="spec-v">4 MB</span>
+          </div>
+          <div class="board-spec">
+            <span class="spec-k">GPIO</span>
+            <span class="spec-v">17 цифровых</span>
+          </div>
+          <div class="board-spec">
+            <span class="spec-k">Питание</span>
+            <span class="spec-v">5V USB / 3.3V</span>
+          </div>
+        </div>
+        <div class="flash-btn-wrapper">
+          <esp-web-install-button manifest="manifest.json">
+            <button slot="activate" class="btn-manual">⚡ Прошить NodeMCU</button>
+            <span slot="unsupported">
+              <a class="btn-manual" href="https://github.com/Bit-wizard-esp/Espie/releases/download/vBeta1.0.0/espie.bin" download>⬇ Скачать прошивку (.bin)</a>
+            </span>
+          </esp-web-install-button>
+          <span class="flash-btn-hint">// требуется Chrome, Edge или Opera</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- INSTRUCTIONS -->
+    <div class="instructions-block">
+      <div class="block-label">// инструкции</div>
+      <div class="instr-grid">
+        <div class="instr-card">
+          <div class="instr-title">Перед прошивкой</div>
+          <ul class="instr-list">
+            <li>Подключи ESP8266 через USB-кабель</li>
+            <li>Установи драйвер CH340 если плата не определяется</li>
+            <li>Закрой все другие программы, использующие порт (Arduino IDE)</li>
+            <li>Используй браузер Chrome, Edge или Opera</li>
+          </ul>
+        </div>
+        <div class="instr-card">
+          <div class="instr-title">После прошивки</div>
+          <ul class="instr-list">
+            <li>Нажми кнопку RESET на плате</li>
+            <li>Дождись появления логотипа на OLED дисплее</li>
+            <li>Собери схему согласно распиновке на главной странице</li>
+            <li>При проблемах — создай Issue на GitHub</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="footer-copy">
+      Установщик на базе <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/Bit-wizard-esp/Espie" target="_blank">GitHub</a>
+      &nbsp;·&nbsp; By Bit-wizard-esp
+    </div>
+  </footer>
+
+  <script>
+    // Show banner if Web Serial not supported
+    if (!('serial' in navigator)) {
+      document.getElementById('noSerialBanner').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
