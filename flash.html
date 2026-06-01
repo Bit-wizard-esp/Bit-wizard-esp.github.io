@@ -41,7 +41,7 @@
       overflow-x: hidden;
     }
 
-    /* scanlines */
+   
     body::before {
       content: '';
       position: fixed;
@@ -55,7 +55,7 @@
       z-index: 9999;
     }
 
-    /* NAV */
+  
     nav {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -97,7 +97,7 @@
       text-shadow: 0 0 8px var(--glow);
     }
 
-    /* MAIN */
+   
     main {
       flex: 1;
       display: flex;
@@ -108,7 +108,7 @@
       position: relative;
     }
 
-    /* radial glow bg */
+    
     main::before {
       content: '';
       position: fixed;
@@ -118,7 +118,7 @@
       pointer-events: none;
     }
 
-    /* grid bg */
+    
     main::after {
       content: '';
       position: fixed;
@@ -131,7 +131,7 @@
       pointer-events: none;
     }
 
-    /* NO SERIAL BANNER */
+
     .no-serial {
       display: none;
       background: rgba(255,68,102,0.08);
@@ -161,7 +161,7 @@
     }
     .browser-link:hover { border-color: var(--primary); color: var(--primary); }
 
-    /* FLASH CARD */
+   
     .flash-card {
       background: var(--bg2);
       border: 1px solid var(--border);
@@ -184,7 +184,7 @@
       background: linear-gradient(90deg, transparent, var(--primary), transparent);
     }
 
-    /* corner decorations */
+ 
     .flash-card::after {
       content: '';
       position: absolute;
@@ -220,7 +220,7 @@
       margin-bottom: 2rem;
     }
 
-    /* ESP8266 chip badge */
+    
     .chip-badge {
       display: inline-flex;
       align-items: center;
@@ -244,7 +244,7 @@
       animation: pulse 2s infinite;
     }
 
-    /* FLASH BUTTON */
+  
     esp-web-install-button { display: block; width: 100%; }
 
     esp-web-install-button[active] button,
@@ -283,14 +283,14 @@
       margin-top: 0.7rem;
     }
 
-    /* DIVIDER */
+  
     .card-divider {
       height: 1px;
       background: linear-gradient(90deg, transparent, var(--border), transparent);
       margin: 2rem 0;
     }
 
-    /* STEPS */
+
     .steps { display: flex; flex-direction: column; gap: 0.8rem; text-align: left; }
 
     .step {
@@ -317,7 +317,7 @@
       margin-top: 1px;
     }
 
-    /* FOOTER */
+   
     footer {
       border-top: 1px solid var(--border);
       padding: 1.5rem 2rem;
@@ -365,7 +365,7 @@
 
   <main>
 
-    <!-- NO SERIAL BANNER -->
+    
     <div class="no-serial" id="noSerialBanner">
       <h3>⚠ Браузер не поддерживает Web Serial API</h3>
       <p>Для прошивки через этот сайт используй один из браузеров:</p>
@@ -376,11 +376,11 @@
       </div>
     </div>
 
-    <!-- FLASH CARD -->
+
     <div class="flash-card">
       <div class="card-label">// web flasher</div>
       <div class="card-title">ESPie</div>
-      <div class="card-version">BETA 1.0.0 · iButton Tool</div>
+      <div class="card-version">RELEASE 1.0.1 · iButton Tool</div>
 
       <div class="chip-badge">
         <span class="chip-dot"></span>
